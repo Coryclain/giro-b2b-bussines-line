@@ -1,0 +1,17 @@
+service: giro-b2b-transactions
+
+provider:
+  name: aws
+  runtime: python3.8
+  stage: ${opt:stage}
+  region: us-east-1
+  deploymentBucket:
+    name: ${self:provider.stage}-giro-b2b-business-line
+
+layers:
+  giro-b2b-transactions:
+    name: ${self:provider.stage}-giro-b2b-transaction
+    path: ./
+    compatibleRuntimes:
+      - python3.8
+    retain: false

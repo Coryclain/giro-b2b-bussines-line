@@ -1,0 +1,26 @@
+
+service: b2b-libraries-pdf
+
+plugins:
+  - serverless-python-requirements
+provider:
+  name: aws
+  runtime: python3.8
+  stage: ${sls:stage}
+  region: us-east-1
+  deploymentBucket:
+    name: ${self:provider.stage}-giro-b2b-business-line
+
+custom:
+  pythonRequirements:
+    pythonBin: python3
+    layer:
+      name: ${self:provider.stage}-b2b-library-pdf
+      description: "layer b2b libraries"
+      compatibleRuntimes:
+        - python3.8
+      allowedAccounts:
+      - "*"
+    zip: true
+    fileName: ./req.txt
+    retain: true

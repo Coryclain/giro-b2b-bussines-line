@@ -1,0 +1,18 @@
+service: b2b-library-sql
+
+provider:
+  name: aws
+  runtime: python3.8
+  stage: ${sls:stage}
+  region: us-east-1
+  deploymentBucket:
+    name: ${self:provider.stage}-giro-b2b-business-line
+
+layers:
+  giro-b2b-libraries:
+    name: ${self:provider.stage}-giro-b2b-sql-libraries
+    path: ./
+    compatibleRuntimes:
+      - python3.8
+    retain: true
+  

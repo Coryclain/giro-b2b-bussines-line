@@ -1,0 +1,135 @@
+service: giro-b2b-catalog
+
+plugins:
+  - serverless-latest-layer-version
+
+custom:
+  stage: ${sls:stage}
+  timezone: 'America/Mexico_City'
+  environment:
+    dev:
+      restApiId: 'ywe6i0cgaa'
+      restApiRootResourceId: '2wqre8'
+      accountId: '093302656701'
+      host_sql: '34.234.124.212'
+      port_sql: '5432'
+      database_sql: 'core'
+      user_sql: 'girotest'
+      password_sql: 'o6r8DYHTGU3K5eC76bz7'
+  vpc:
+    securityGroupIds: 
+      - 'sg-0834340736178c252'
+    subnetIds:
+      - 'subnet-082779cc2ace59c19'
+      - 'subnet-cb1bdec4'
+  serverlessIfElse:
+    - If: '"${self:custom.stage}" == "prod"'
+      Set:
+        functions.step.vpc: 
+          ${self:custom.vpc}
+
+provider:
+  name: aws
+  runtime: python3.8
+  stage: ${opt:stage}
+  region: us-east-1
+  deploymentBucket:
+    name: ${self:provider.stage}-giro-b2b-business-line
+  apiGateway:
+    restApiId: ${self:custom.environment.${self:custom.stage}.restApiId}
+    restApiRootResourceId: ${self:custom.environment.${self:custom.stage}.restApiRootResourceId}
+
+functions:
+  get_catalog:
+    handler: handler.handler
+    name: ${self:provider.stage}-b2b-get-catalog
+    timeout: 30
+    memorySize: 1024
+    events:
+      - http:
+          path: /
+          method: get
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - Access-Control-Allow-Origin
+              - Access-Control-Allow-Credentials
+          request:
+            parameters:
+              querystrings:
+                url: false
+              headers:
+                foo: false
+              paths:
+                bar: false
+    environment:
+      STAGE: ${self:provider.stage}
+      TIME_ZONE: ${self:custom.timezone}
+      HOST_SQL: ${self:custom.environment.${self:custom.stage}.host_sql}
+      PORT_SQL: ${self:custom.environment.${self:custom.stage}.port_sql}
+      DATABASE_SQL: ${self:custom.environment.${self:custom.stage}.database_sql}
+      USER_SQL: ${self:custom.environment.${self:custom.stage}.user_sql}
+      PASSWORD_SQL: ${self:custom.environment.${self:custom.stage}.password_sql}
+      TABLE_TRANSACTIONS: ${self:provider.stage}-giro-b2b-transactions
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${self:custom.environment.${self:custom.stage}.accountId}:layer:${self:provider.stage}-giro-b2b-transaction:latest
+      - arn:aws:lambda:${self:provider.region}:${self:custom.environment.${self:custom.stage}.accountId}:layer:${self:provider.stage}-b2b-libraries:latest
+      - arn:aws:lambda:${self:provider.region}:${self:custom.environment.${self:custom.stage}.accountId}:layer:${self:provider.stage}-giro-b2b-sql-libraries:latest
+    role: userRole
+
+#Roles
+resources:
+  Resources:
+    userRole:
+      Type: AWS::IAM::Role
+      Properties:
+        Path: /giro/api/${self:custom.stage}/
+        RoleName: ${self:custom.stage}-${self:service}-role
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: ${self:custom.stage}-${self:service}-policy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "dynamodb:PutItem"
+                    - "dynamodb:BatchWriteItem"
+                    - "dynamodb:BatchGetItem"
+                    - "dynamodb:GetItem"
+                    - "dynamodb:Scan"
+                    - "dynamodb:Query"
+                    - "dynamodb:UpdateItem"
+                    - "dynamodb:DeleteItem"
+                    - "logs:CreateLogStream"
+                    - "logs:PutLogEvents"
+                    - "lambda:InvokeFunction"
+                    - "dynamodb:GetRecords"
+                    - "dynamodb:GetShardIterator"
+                    - "dynamodb:DescribeStream"
+                    - "dynamodb:ListStreams"
+                    - "s3:ListBucket"
+                    - "s3:GetObject"
+                    - "s3:PutObject"
+                    - "sts:AssumeRole"
+                    - "sts:GetAccessKeyInfo"
+                    - "ec2:CreateNetworkInterface"
+                    - "ec2:DescribeNetworkInterfaces"
+                    - "ec2:DeleteNetworkInterface"
+                    - "ec2:DescribeSecurityGroups"
+                    - "ec2:DescribeSubnets"
+                    - "ec2:DescribeVpcs"
+                  Resource: "*"
